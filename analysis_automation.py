@@ -14,12 +14,12 @@ PRE_SEG_PATH  = os.path.join(BASE_DIR, "phantom01_0_Loop_x_pre_seg.seg.nrrd")
 POST_MRK_PATH = os.path.join(BASE_DIR, "post.mrk.json")
 PRE_MRK_PATH  = os.path.join(BASE_DIR, "pre.mrk.json")
 
-OUTPUT_DIR = Path("./output")
+OUTPUT_DIR = (Path(os.getcwd()) / "output").resolve()
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-POST_MESH_PATH = os.path.join(OUTPUT_DIR, "post_aligned.ply")
-PRE_MESH_PATH  = os.path.join(OUTPUT_DIR, "pre.ply")
-TRANSFORM_PATH = os.path.join(OUTPUT_DIR, "post2pre.h5")
+POST_MESH_PATH = str(OUTPUT_DIR / "post_aligned.ply")
+PRE_MESH_PATH  = str(OUTPUT_DIR / "pre.ply")
+TRANSFORM_PATH = str(OUTPUT_DIR / "post2pre.h5")
 
 #
 # ---- HELPERS ----
