@@ -9,6 +9,7 @@ python create_saint_config.py --saint-root /home/juan95/research/discovery_grant
 ```
 
 Note to juan: this script only work with pyenv ros_jazzy in rog pc. `source ~/pyvenv/ros_jazzy/bin/activate`
+
 ## Slicer automation
 ```
 slicer  --no-main-window --python-script analysis_automation.py
