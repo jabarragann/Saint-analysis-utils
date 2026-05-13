@@ -1,0 +1,35 @@
+# This is the base file for Coordination Application
+world config: <SAINT_ROOT>/ADF/world/world.yaml
+color config: <SAINT_ROOT>/ADF/color/colors.yaml
+input devices config: <SAINT_ROOT>/ADF/input_devices/input_devices.yaml
+plugins: [
+  {
+    name: DRILLING_SIMULATOR,
+    filename: libvolumetric_drilling.so,
+    path: build/simulation_assisted_navigation_framework/
+  },
+  {
+    name: ambf_tf_plugin,
+    filename: libambf_tf_plugin.so,
+    path: build/ambf_tf_plugin/,
+  }
+]
+multibody configs:
+  - "<SAINT_ROOT>/ADF/drills.yaml" #0
+  - "<SAINT_ROOT>/ADF/volume_171.yaml" #1
+  - "<SAINT_ROOT>/ADF/volume_256.yaml" #2
+  - "<SAINT_ROOT>/ADF/volume_512.yaml" #3
+  - "<SAINT_ROOT>/ADF/segmentation_camera.yaml" #4
+  - "<SAINT_ROOT>/ADF/stereo_cameras.yaml" #5
+  - "<SAINT_ROOT>/ADF/single_stereo_camera.yaml" #6
+  - "<SAINT_ROOT>/ADF/gaze_marker.yaml" #7
+  - "<SAINT_ROOT>/ADF/drills/drills_in_si_units/1mm_drill_in_real_units.yaml" #8 
+  - "<SAINT_ROOT>/ADF/drills/drills_in_si_units/2mm_drill_in_real_units.yaml" #9 
+  - "<SAINT_ROOT>/ADF/drills/drills_in_si_units/4mm_drill_in_real_units.yaml" #10 
+  - "<SAINT_ROOT>/ADF/drills/drills_in_si_units/6mm_drill_in_real_units.yaml" #11 
+  - "<SAINT_ROOT>/ADF/volume_sim_assisted_test01.yaml" #12
+  - "<SAINT_ROOT>/resources/ros2_test_assets/phantom01/phantom01.yaml" #13 # SAINT 2026 - Phantom01
+  ## Anatomies - not included in repo
+  - "<PHANTOM_PATH>" #14
+
+

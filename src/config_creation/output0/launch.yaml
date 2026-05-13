@@ -1,0 +1,35 @@
+# This is the base file for Coordination Application
+world config: /home/juan95/research/discovery_grant/volumetric_drilling/ADF/world/world.yaml
+color config: /home/juan95/research/discovery_grant/volumetric_drilling/ADF/color/colors.yaml
+input devices config: /home/juan95/research/discovery_grant/volumetric_drilling/ADF/input_devices/input_devices.yaml
+plugins: [
+  {
+    name: DRILLING_SIMULATOR,
+    filename: libvolumetric_drilling.so,
+    path: build/simulation_assisted_navigation_framework/
+  },
+  {
+    name: ambf_tf_plugin,
+    filename: libambf_tf_plugin.so,
+    path: build/ambf_tf_plugin/,
+  }
+]
+multibody configs:
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/drills.yaml" #0
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/volume_171.yaml" #1
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/volume_256.yaml" #2
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/volume_512.yaml" #3
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/segmentation_camera.yaml" #4
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/stereo_cameras.yaml" #5
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/single_stereo_camera.yaml" #6
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/gaze_marker.yaml" #7
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/drills/drills_in_si_units/1mm_drill_in_real_units.yaml" #8 
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/drills/drills_in_si_units/2mm_drill_in_real_units.yaml" #9 
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/drills/drills_in_si_units/4mm_drill_in_real_units.yaml" #10 
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/drills/drills_in_si_units/6mm_drill_in_real_units.yaml" #11 
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/ADF/volume_sim_assisted_test01.yaml" #12
+  - "/home/juan95/research/discovery_grant/volumetric_drilling/resources/ros2_test_assets/phantom01/phantom01.yaml" #13 # SAINT 2026 - Phantom01
+  ## Anatomies - not included in repo
+  - "/home/juan95/research/discovery_grant/saint_tools/nrrd_to_adf_hisashi/data/output2/phantom_01_05.yaml" #14
+
+

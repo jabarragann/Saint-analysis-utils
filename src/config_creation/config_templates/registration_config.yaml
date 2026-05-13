@@ -1,0 +1,17 @@
+## Pointer based registration
+pointer:
+  tooltip name: drill_tip # Rigid body that is attached to the tip of the tool
+  name of points:
+    - F_1 
+    - F_2 
+
+
+  object name: Segmentation_Anatomical_Origin
+
+## Pivot calibration
+pivot:
+  marker namespace: <MARKER_NAMESPACE> 
+  marker name: marker  #AMBF drill body name
+  type: AUTO
+  resolution: 0.01
+  number of points: 150

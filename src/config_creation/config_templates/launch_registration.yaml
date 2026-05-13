@@ -1,0 +1,23 @@
+# This is the base file for Coordination Application
+world config: <SAINT_ROOT>/ADF/world/world_registration.yaml
+color config: <SAINT_ROOT>/ADF/color/colors.yaml
+input devices config: <SAINT_ROOT>/ADF/input_devices/input_devices.yaml
+
+plugins:
+  [
+    {
+      path: build/ambf_registration_plugin/,
+      name: registration_plugin,
+      filename: libregistration_plugin.so,
+    },
+    {
+      path: build/ambf_tf_plugin/,
+      name: ambf_tf_plugin,
+      filename: libambf_tf_plugin.so,
+    },
+]
+
+multibody configs:
+  - "<SAINT_ROOT>/ADF/drills/drills_in_si_units/<DRILL_SIZE>mm_drill_in_real_units.yaml" #0 #surgical drill
+  - "<PHANTOM_PATH>" #1 
+
