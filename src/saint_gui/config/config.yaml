@@ -1,0 +1,7 @@
+
+output_dir: /Users/juan95/research/saint_project/saint-utils/output/phantom
+
+data_dir: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05
+segmentation_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_real_seg.seg.nrrd
+fiducials_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_pre.mrk.json
+nrrd_to_adf_script: /Users/juan95/research/saint_project/nrrd_to_adf/nrrd_to_adf.py
