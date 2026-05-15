@@ -1,7 +1,17 @@
 
-output_dir: /Users/juan95/research/saint_project/saint-utils/output/phantom
+output_dir: /Users/juan95/research/saint_project/saint-utils/output/experiment_xx
 
 data_dir: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05
 segmentation_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_real_seg.seg.nrrd
 fiducials_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_pre.mrk.json
 nrrd_to_adf_script: /Users/juan95/research/saint_project/nrrd_to_adf/nrrd_to_adf.py
+
+output_dir_structure:
+  phantom_dir: phantom
+  config_dir: config
+
+saint_config:
+  create_saint_config_script: /Users/juan95/research/saint_project/saint-utils/src/config_creation/create_saint_config.py
+  saint_root: /home/juan95/research/discovery_grant/volumetric_drilling
+  drill_size: 4
+  marker_namespace: /atracsys/drill_marker

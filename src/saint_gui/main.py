@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QMainWindow,
     QPushButton,
@@ -27,12 +28,16 @@ class PathField(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        self.label = QLabel(label)
+        self.label.setMinimumWidth(140)
+
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText(label)
 
         self.browse_button = QPushButton("Browse...")
         self.browse_button.clicked.connect(self._browse)
 
+        layout.addWidget(self.label)
         layout.addWidget(self.line_edit)
         layout.addWidget(self.browse_button)
 
@@ -53,17 +58,23 @@ class ExperimentSetupPanel(QGroupBox):
         super().__init__("Experiment Setup", parent)
 
         self.nrrd_to_adf_script = config.get("nrrd_to_adf_script", "")
+        self.saint_config = config.get("saint_config", {}) or {}
         self.process = None
+        self._current_label = ""
+        self._current_button = None
 
         layout = QVBoxLayout(self)
 
-        self.output_dir_field = PathField("Experiment output dir", select_directory=True)
-        self.segmentation_field = PathField("Segmentation path", select_directory=False)
-        self.fiducials_field = PathField("Fiducials path", select_directory=False)
+        self.output_dir_field = PathField("experiment output", select_directory=True)
+        self.segmentation_field = PathField(".seg.nrrd path", select_directory=False)
+        self.fiducials_field = PathField("fiducials.json path", select_directory=False)
 
         self.output_dir_field.line_edit.setText(config.get("output_dir", ""))
         self.segmentation_field.line_edit.setText(config.get("segmentation_path", ""))
         self.fiducials_field.line_edit.setText(config.get("fiducials_path", ""))
+
+        self.phantom_subdir = config.get("output_dir_structure", {}).get("phantom_dir", "")
+        self.config_subdir = config.get("output_dir_structure", {}).get("config_dir", "")
 
         self.create_phantom_button = QPushButton("Create Phantom")
         self.create_phantom_button.clicked.connect(self._on_create_phantom)
@@ -81,17 +92,12 @@ class ExperimentSetupPanel(QGroupBox):
         layout.addLayout(button_row)
 
     def _on_create_phantom(self):
-        if self.process is not None and self.process.state() != QProcess.NotRunning:
-            print("Create Phantom is already running.")
-            return
-
         output_dir = Path(self.output_dir_field.text())
         nrrd_file = self.segmentation_field.text()
         fiducial_filepath = self.fiducials_field.text()
-        adf_filepath = str(output_dir / f"{Path(nrrd_file).stem}.yaml")
-        slices_path = str(output_dir / "slices")
+        adf_filepath = str(output_dir / self.phantom_subdir / f"{Path(nrrd_file).stem}.yaml")
+        slices_path = str(output_dir / self.phantom_subdir / "slices")
 
-        program = sys.executable
         args = [
             self.nrrd_to_adf_script,
             "--nrrd_file", nrrd_file,
@@ -102,15 +108,57 @@ class ExperimentSetupPanel(QGroupBox):
             "--fiducial_filepath", fiducial_filepath,
             "-v", "mastoidectomy_volume",
         ]
-        print("[Create Phantom] Running command:")
+        self._run_command(
+            label="Create Phantom",
+            args=args,
+            cwd=str(Path(self.nrrd_to_adf_script).parent),
+            button=self.create_phantom_button,
+        )
+
+    def _on_create_config(self):
+        output_dir = Path(self.output_dir_field.text()) 
+        nrrd_file = self.segmentation_field.text()
+        phantom_path = str(output_dir / self.phantom_subdir / f"{Path(nrrd_file).stem}.yaml")
+        script = self.saint_config.get("create_saint_config_script", "")
+        saint_root = self.saint_config.get("saint_root", "")
+        drill_size = self.saint_config.get("drill_size", "")
+        marker_namespace = self.saint_config.get("marker_namespace", "")
+
+        output_config_dir = output_dir / self.config_subdir
+
+        args = [
+            script,
+            "--saint-root", str(saint_root),
+            "--drill-size", str(drill_size),
+            "--phantom-path", phantom_path,
+            "--marker-namespace", str(marker_namespace),
+            "--output-dir", str(output_config_dir),
+        ]
+        self._run_command(
+            label="Create Config",
+            args=args,
+            cwd=str(Path(script).parent) if script else None,
+            button=self.create_config_button,
+        )
+
+    def _run_command(self, label, args, cwd, button):
+        if self.process is not None and self.process.state() != QProcess.NotRunning:
+            print(f"[{label}] Another process is already running.")
+            return
+
+        program = sys.executable
+        print(f"[{label}] Running command:")
         print(shlex.join([program, *args]))
 
+        self._current_label = label
+        self._current_button = button
         self.process = QProcess(self)
-        self.process.setWorkingDirectory(str(Path(self.nrrd_to_adf_script).parent))
+        if cwd:
+            self.process.setWorkingDirectory(cwd)
         self.process.readyReadStandardOutput.connect(self._on_stdout)
         self.process.readyReadStandardError.connect(self._on_stderr)
         self.process.finished.connect(self._on_process_finished)
-        self.create_phantom_button.setEnabled(False)
+        button.setEnabled(False)
         self.process.start(program, args)
 
     def _on_stdout(self):
@@ -124,14 +172,9 @@ class ExperimentSetupPanel(QGroupBox):
         sys.stderr.flush()
 
     def _on_process_finished(self, exit_code, _exit_status):
-        print(f"[Create Phantom finished with exit code {exit_code}]")
-        self.create_phantom_button.setEnabled(True)
-
-    def _on_create_config(self):
-        print("Create Config")
-        print("Experiment output dir:", self.output_dir_field.text())
-        print("Segmentation path:", self.segmentation_field.text())
-        print("Fiducials path:", self.fiducials_field.text())
+        print(f"[{self._current_label} finished with exit code {exit_code}]")
+        if self._current_button is not None:
+            self._current_button.setEnabled(True)
 
 
 class MainWindow(QMainWindow):
