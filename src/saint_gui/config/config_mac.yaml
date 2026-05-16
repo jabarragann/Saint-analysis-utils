@@ -1,7 +1,5 @@
 
 output_dir: /Users/juan95/research/saint_project/saint-utils/output/experiment_xx
-
-data_dir: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05
 segmentation_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_real_seg.seg.nrrd
 fiducials_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_pre.mrk.json
 

@@ -1,7 +1,6 @@
 
 output_dir: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/output/experiment_xx
 
-data_dir: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom
 segmentation_path: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom/P01_05_real_seg.seg.nrrd
 fiducials_path: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom/P01_05_pre.mrk.json
 
