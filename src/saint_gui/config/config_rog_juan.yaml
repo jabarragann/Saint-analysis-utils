@@ -1,0 +1,23 @@
+
+output_dir: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/output/experiment_xx
+
+data_dir: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom
+segmentation_path: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom/P01_05_real_seg.seg.nrrd
+fiducials_path: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/data/sample_phantom/P01_05_pre.mrk.json
+
+copy_input_files: true 
+
+script_paths:
+  nrrd_to_adf_script: /home/juan95/research/discovery_grant/saint_tools/nrrd_to_adf_hisashi/nrrd_to_adf.py
+  create_saint_config_script: /home/juan95/research/discovery_grant/saint_tools/saint_automation_tools/src/config_creation/create_saint_config.py
+
+output_dir_structure:
+  phantom_dir: phantom
+  config_dir: config
+  input_backup_dir: input_backup 
+
+saint_config:
+  saint_root: /home/juan95/research/discovery_grant/volumetric_drilling
+  drill_size: 4
+  marker_namespace: /atracsys/drill_marker
+
