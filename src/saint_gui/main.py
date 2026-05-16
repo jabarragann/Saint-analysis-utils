@@ -317,6 +317,7 @@ class DataRecordingPanel(ProcessRunnerPanel):
         self.process.finished.connect(self._on_recording_finished)
         self.process.start(program, args)
         self.record_button.setText("Stop Recording")
+        self.record_button.setStyleSheet("background-color: #2ecc71; color: white;")
 
     def _stop_recording(self):
         pid = int(self.process.processId())
@@ -332,6 +333,7 @@ class DataRecordingPanel(ProcessRunnerPanel):
     def _on_recording_finished(self, exit_code, _exit_status):
         print(f"[Data Recording finished with exit code {exit_code}]")
         self.record_button.setText("Record Data")
+        self.record_button.setStyleSheet("")
         self.record_button.setEnabled(True)
 
 
