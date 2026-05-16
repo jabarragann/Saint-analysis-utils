@@ -1,4 +1,5 @@
 import argparse
+import os
 import shlex
 import shutil
 import signal
@@ -118,6 +119,7 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         self.phantom_subdir = config.get("output_dir_structure", {}).get("phantom_dir", "")
         self.config_subdir = config.get("output_dir_structure", {}).get("config_dir", "")
         self.input_backup_subdir = config.get("output_dir_structure", {}).get("input_backup_dir", "")
+        self.ros_bag_subdir = config.get("output_dir_structure", {}).get("ros_bag_dir", "")
         self.copy_input_files = bool(config.get("copy_input_files", False))
 
         self.create_phantom_button = QPushButton("Create Phantom")
@@ -146,6 +148,9 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
 
     def get_input_backup_dir(self):
         return self.get_output_dir() / self.input_backup_subdir
+
+    def get_ros_bag_dir(self):
+        return self.get_output_dir() / self.ros_bag_subdir
 
     def _backup_input_files(self, nrrd_file, fiducial_filepath):
         backup_dir = self.get_input_backup_dir()
@@ -274,6 +279,62 @@ class RunSaintPanel(ProcessRunnerPanel):
         )
 
 
+class DataRecordingPanel(ProcessRunnerPanel):
+    def __init__(self, experiment_panel, parent=None):
+        super().__init__("Data Recording", parent)
+        self.experiment_panel = experiment_panel
+
+        layout = QVBoxLayout(self)
+        self.record_button = QPushButton("Record Data")
+        self.record_button.clicked.connect(self._on_click)
+        layout.addWidget(self.record_button)
+
+    def _is_running(self):
+        return self.process is not None and self.process.state() != QProcess.NotRunning
+
+    def _on_click(self):
+        if self._is_running():
+            self._stop_recording()
+        else:
+            self._start_recording()
+
+    def _start_recording(self):
+        bag_dir = self.experiment_panel.get_ros_bag_dir()
+        bag_dir.mkdir(parents=True, exist_ok=True)
+
+        program = "ros2"
+        args = ["bag", "record", "/ambf/env/World/State"]
+
+        print("[Data Recording] Running command:")
+        print(shlex.join([program, *args]))
+
+        self._current_label = "Data Recording"
+        self._current_button = self.record_button
+        self.process = QProcess(self)
+        self.process.setWorkingDirectory(str(bag_dir))
+        self.process.readyReadStandardOutput.connect(self._on_stdout)
+        self.process.readyReadStandardError.connect(self._on_stderr)
+        self.process.finished.connect(self._on_recording_finished)
+        self.process.start(program, args)
+        self.record_button.setText("Stop Recording")
+
+    def _stop_recording(self):
+        pid = int(self.process.processId())
+        if pid <= 0:
+            print("[Data Recording] No PID available; cannot send SIGINT.")
+            return
+        print(f"[Data Recording] Sending SIGINT to PID {pid}")
+        try:
+            os.kill(pid, signal.SIGINT)
+        except ProcessLookupError:
+            print(f"[Data Recording] Process {pid} not found.")
+
+    def _on_recording_finished(self, exit_code, _exit_status):
+        print(f"[Data Recording finished with exit code {exit_code}]")
+        self.record_button.setText("Record Data")
+        self.record_button.setEnabled(True)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, config):
         super().__init__()
@@ -287,6 +348,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(experiment_panel)
         layout.addWidget(RunRegistrationPanel(experiment_panel))
         layout.addWidget(RunSaintPanel(experiment_panel))
+        layout.addWidget(DataRecordingPanel(experiment_panel))
         layout.addStretch()
 
 

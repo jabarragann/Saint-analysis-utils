@@ -1,4 +1,4 @@
-
+# Everything goes to the output_dir
 output_dir: /Users/juan95/research/saint_project/saint-utils/output/experiment_xx
 segmentation_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_real_seg.seg.nrrd
 fiducials_path: /Users/juan95/research/saint_project/saint-utils/data/phantom01_05/P01_05_pre.mrk.json
@@ -13,6 +13,7 @@ output_dir_structure:
   phantom_dir: phantom
   config_dir: config
   input_backup_dir: input_backup 
+  ros_bag_dir: ros_bag
 
 saint_config:
   saint_root: /home/juan95/research/discovery_grant/volumetric_drilling
