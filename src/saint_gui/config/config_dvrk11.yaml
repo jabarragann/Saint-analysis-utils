@@ -1,0 +1,23 @@
+
+output_dir: /home/jbarrag3/research/saint_system/Saint-analysis-utils/output/experiment_xx
+
+segmentation_path: /home/jbarrag3/research/saint_system/nrrd_to_adf/data/sample_data/P01_D04_real_fine.seg.nrrd 
+fiducials_path: /home/jbarrag3/research/saint_system/nrrd_to_adf/data/sample_data/P01_D04_real_pts.mrk.json 
+
+copy_input_files: true 
+
+script_paths:
+  nrrd_to_adf_script: /home/jbarrag3/research/saint_system/nrrd_to_adf/nrrd_to_adf.py 
+  create_saint_config_script: /home/jbarrag3/research/saint_system/Saint-analysis-utils/src/config_creation/create_saint_config.py 
+
+output_dir_structure:
+  phantom_dir: phantom
+  config_dir: config
+  input_backup_dir: input_backup 
+  ros_bag_dir: ros_bag
+
+saint_config:
+  saint_root: /home/jbarrag3/ros_ws/ros_ws_saint/src/saint/volumetric_drilling_saint 
+  drill_size: 4
+  marker_namespace: /atracsys/drill_marker
+
