@@ -1,0 +1,22 @@
+output_dir: /home/saint/saint_2026/saint_utils/Saint-analysis-utils/output/experiment_00
+
+segmentation_path: /home/saint/saint_2026/saint_utils/nrrd_to_adf_hisashi/data/P01_05/P01_05_real_seg.seg.nrrd
+fiducials_path: /home/saint/saint_2026/saint_utils/nrrd_to_adf_hisashi/data/P01_05/P01_05_pre.mrk.json
+
+copy_input_files: true 
+
+script_paths:
+  nrrd_to_adf_script: /home/saint/saint_2026/saint_utils/nrrd_to_adf_hisashi/nrrd_to_adf.py
+  create_saint_config_script: /home/saint/saint_2026/saint_utils/Saint-analysis-utils/src/config_creation/create_saint_config.py
+
+output_dir_structure:
+  phantom_dir: phantom
+  config_dir: config
+  input_backup_dir: input_backup 
+  ros_bag_dir: ros_bag
+
+saint_config:
+  saint_root: /home/saint/saint_2026/catkin_ws/src/saint_volumetric_drilling
+  drill_size: 4
+  marker_namespace: /atracsys/drill_marker
+
