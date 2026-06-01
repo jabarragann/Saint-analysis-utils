@@ -199,14 +199,16 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         script = self.create_saint_config_script
         saint_root = self.saint_config.get("saint_root", "")
         drill_size = self.saint_config.get("drill_size", "")
-        marker_namespace = self.saint_config.get("marker_namespace", "")
+        drill_marker_namespace = self.saint_config.get("drill_marker_namespace", "")
+        pointer_marker_namespace = self.saint_config.get("pointer_marker_namespace", "")
 
         args = [
             script,
             "--saint-root", str(saint_root),
             "--drill-size", str(drill_size),
             "--phantom-path", phantom_path,
-            "--marker-namespace", str(marker_namespace),
+            "--drill-marker-namespace", str(drill_marker_namespace),
+            "--pointer-marker-namespace", str(pointer_marker_namespace),
             "--output-dir", str(self.get_config_dir()),
         ]
         self._run_command(
@@ -219,7 +221,7 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
 
 
 class RunRegistrationPanel(ProcessRunnerPanel):
-    TF_LIST_OPTIONS = ["tf_config.yaml", "tf_config_drill.yaml"]
+    TF_LIST_OPTIONS = ["tf_config_drill.yaml", "tf_config_pointer.yaml"]
 
     def __init__(self, experiment_panel, parent=None):
         super().__init__("Run Registration", parent)
@@ -246,32 +248,44 @@ class RunRegistrationPanel(ProcessRunnerPanel):
         self.run_button.clicked.connect(self._on_run)
         layout.addWidget(self.run_button)
 
+    @staticmethod
+    def _registration_config_for(tf_list):
+        # The drill/pointer tf and registration configs share a naming scheme,
+        # so the matching registration file is derived from the selected tf file.
+        return tf_list.replace("tf_config", "registration_config")
+
     def _build_command(self, tf_list):
         program = "ambf_simulator"
         args = [
             "--launch_file", "launch_registration.yaml",
             "-l", "0,1",
-            "--registration_config", "registration_config.yaml",
+            "--registration_config", self._registration_config_for(tf_list),
             "--tf_list", tf_list,
         ]
         return shlex.join([program, *args])
 
+    def _set_arg(self, tokens, flag, value):
+        # Update an existing flag's value in place, or append it if absent.
+        if flag in tokens:
+            idx = tokens.index(flag)
+            if idx + 1 < len(tokens):
+                tokens[idx + 1] = value
+            else:
+                tokens.append(value)
+        else:
+            tokens += [flag, value]
+        return tokens
+
     def _on_tf_list_changed(self, tf_list):
-        # Replace only the --tf_list argument in the command shown, preserving
-        # any other manual edits the user made to the command text.
+        # Replace the --tf_list and matching --registration_config arguments in
+        # the command shown, preserving any other manual edits the user made.
         current = self.command_edit.toPlainText().strip()
         if not current:
             self.command_edit.setPlainText(self._build_command(tf_list))
             return
         tokens = shlex.split(current)
-        if "--tf_list" in tokens:
-            idx = tokens.index("--tf_list")
-            if idx + 1 < len(tokens):
-                tokens[idx + 1] = tf_list
-            else:
-                tokens.append(tf_list)
-        else:
-            tokens += ["--tf_list", tf_list]
+        self._set_arg(tokens, "--tf_list", tf_list)
+        self._set_arg(tokens, "--registration_config", self._registration_config_for(tf_list))
         self.command_edit.setPlainText(shlex.join(tokens))
 
     def _on_run(self):
@@ -317,7 +331,7 @@ class RunSaintPanel(ProcessRunnerPanel):
             "-l", "6,10,14",
             "--mute", "true",
             "--nt", "1",
-            "--tf_list", "tf_config.yaml",
+            "--tf_list", "tf_config_drill.yaml",
         ]
         self._run_command(
             label="Run SAINT",

@@ -19,5 +19,6 @@ output_dir_structure:
 saint_config:
   saint_root: /home/jbarrag3/ros_ws/ros_ws_saint/src/saint/volumetric_drilling_saint 
   drill_size: 4
-  marker_namespace: /atracsys/drill_marker
+  drill_marker_namespace: /atracsys/drill_marker
+  pointer_marker_namespace: /atracsys/pointer_tool
 

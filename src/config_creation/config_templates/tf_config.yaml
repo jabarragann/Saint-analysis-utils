@@ -30,8 +30,6 @@ TF marker_body-drill_tip:
     Mean calibration error: 0.000360372
 
 
-
-
 ## This sets the drill body orientation with respect to the drill reference body.
 # This value came from doing two pivot calibrations with shafts of different lenghts
 # This enables you to calculate the drill's body angle with respect to the ref body.

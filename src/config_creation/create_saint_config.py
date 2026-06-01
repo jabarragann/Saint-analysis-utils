@@ -1,10 +1,16 @@
 #!/usr/bin/env python
-"""Generate SAINT config files from templates in data/sample_configs.
+"""Generate SAINT config files from templates in config_templates.
 
-Reads the four template YAMLs, substitutes <SAINT_ROOT>, <DRILL_SIZE>, and
-<PHANTOM_PATH> markers, and writes the resulting files to the output dir.
-For registration_config.yaml, additionally fills in `object name` and
-`name of points` from the bodies declared in the phantom YAML.
+Substitutes <SAINT_ROOT>, <DRILL_SIZE>, <PHANTOM_PATH>, and <MARKER_NAMESPACE>
+markers and writes the resulting files to the output dir.
+
+The drill and pointer tools each get their own tf and registration configs:
+  - tf_config_drill.yaml / tf_config_pointer.yaml come from separate templates.
+  - registration_config_drill.yaml / registration_config_pointer.yaml come from
+    the same registration_config.yaml template and differ only in the substituted
+    <MARKER_NAMESPACE>.
+For the registration configs, `object name` and `name of points` are additionally
+filled in from the bodies declared in the phantom YAML.
 """
 
 from argparse import ArgumentParser
@@ -13,13 +19,6 @@ import yaml
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TEMPLATE_DIR = SCRIPT_DIR  / "config_templates"
-
-TEMPLATE_FILES = [
-    "launch.yaml",
-    "launch_registration.yaml",
-    "registration_config.yaml",
-    "tf_config.yaml",
-]
 
 ANATOMICAL_ORIGIN_SUFFIX = "_Anatomical_Origin"
 
@@ -69,13 +68,13 @@ def generate_launch_registration(output_dir: Path, saint_root: str, drill_size: 
     (output_dir / "launch_registration.yaml").write_text(text)
 
 
-def generate_tf_config(output_dir: Path, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> None:
-    src = TEMPLATE_DIR / "tf_config.yaml"
+def generate_tf_config(output_dir: Path, template_name: str, output_name: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> None:
+    src = TEMPLATE_DIR / template_name
     text = substitute_markers(src.read_text(), saint_root, drill_size, phantom_path, marker_namespace)
-    (output_dir / "tf_config.yaml").write_text(text)
+    (output_dir / output_name).write_text(text)
 
 
-def generate_registration_config(output_dir: Path, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> None:
+def generate_registration_config(output_dir: Path, output_name: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> None:
     src = TEMPLATE_DIR / "registration_config.yaml"
     text = substitute_markers(src.read_text(), saint_root, drill_size, phantom_path, marker_namespace)
 
@@ -85,7 +84,7 @@ def generate_registration_config(output_dir: Path, saint_root: str, drill_size: 
     config["pointer"]["object name"] = anatomical_origin
     config["pointer"]["name of points"] = fiducials
 
-    with open(output_dir / "registration_config.yaml", "w") as f:
+    with open(output_dir / output_name, "w") as f:
         yaml.safe_dump(config, f, sort_keys=False)
 
 
@@ -94,7 +93,8 @@ def main():
     parser.add_argument("--saint-root", required=True, help="Value to substitute for <SAINT_ROOT>")
     parser.add_argument("--drill-size", required=True, help="Value to substitute for <DRILL_SIZE>")
     parser.add_argument("--phantom-path", required=True, help="Path to phantom YAML (substituted for <PHANTOM_PATH>)")
-    parser.add_argument("--marker-namespace", required=True, help="ROS topic namespace (substituted for <MARKER_NAMESPACE>), e.g. /atracsys/drill_marker")
+    parser.add_argument("--drill-marker-namespace", required=True, help="ROS topic namespace for the drill marker (substituted for <MARKER_NAMESPACE> in the drill configs), e.g. /atracsys/drill_marker")
+    parser.add_argument("--pointer-marker-namespace", required=True, help="ROS topic namespace for the pointer tool (substituted for <MARKER_NAMESPACE> in the pointer configs), e.g. /atracsys/pointer_tool")
     parser.add_argument("--output-dir", required=True, help="Directory to write generated config files")
     args = parser.parse_args()
 
@@ -103,12 +103,18 @@ def main():
 
     phantom_path = str(Path(args.phantom_path).resolve())
 
-    generate_launch(output_dir, args.saint_root, args.drill_size, phantom_path, args.marker_namespace)
-    generate_launch_registration(output_dir, args.saint_root, args.drill_size, phantom_path, args.marker_namespace)
-    generate_tf_config(output_dir, args.saint_root, args.drill_size, phantom_path, args.marker_namespace)
-    generate_registration_config(output_dir, args.saint_root, args.drill_size, phantom_path, args.marker_namespace)
+    # The launch files don't reference <MARKER_NAMESPACE>; the drill namespace is
+    # passed only to satisfy the substitution helper's signature.
+    generate_launch(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+    generate_launch_registration(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
 
-    print(f"Wrote {len(TEMPLATE_FILES)} config files to {output_dir}")
+    generate_tf_config(output_dir, "tf_config_drill.yaml", "tf_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+    generate_tf_config(output_dir, "tf_config_pointer.yaml", "tf_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
+
+    generate_registration_config(output_dir, "registration_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+    generate_registration_config(output_dir, "registration_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
+
+    print(f"Wrote config files to {output_dir}")
 
 
 if __name__ == "__main__":

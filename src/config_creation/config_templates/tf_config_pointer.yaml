@@ -3,22 +3,26 @@
 
 transformations:
   - TF world-atracsys_drill_marker
-  - TF marker_body-drill_tip
+  - TF marker_body-pointer_tip
   - TF pointer_tip-drill_body
 
 TF world-atracsys_drill_marker: # Move drill with atracsys measurements
   parent: World
   child: marker
   type: ROS
-  rostopic name: /atracsys/pointer_tool/measured_cp
+  # Example
+  # rostopic name: /atracsys/pointer_tool/measured_cp
+  rostopic name: <MARKER_NAMESPACE>/measured_cp
 
-TF marker_body-drill_tip: 
+TF marker_body-pointer_tip: 
   parent: marker
   child: pointer_tip 
   type: FIXED
   transformation: # pointer tool - pivot calibration
+    # Pivot performed on 06-01-2026
     position: {x: 0.0122844, y: -0.131931, z: -0.031379}
     Mean calibration error: 0.000291994
+
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
 
 ## This sets the drill body orientation with respect to the drill reference body.
@@ -26,7 +30,8 @@ TF marker_body-drill_tip:
 # This enables you to calculate the drill's body angle with respect to the ref body.
 TF pointer_tip-drill_body:
   parent: pointer_tip
-  child: drill_body_4mm
+  #example: 1,2,4,6
+  child: drill_body_<DRILL_SIZE>mm
   type: FIXED
   transformation:
     position: { x: 0.0, y: 0.0, z: 0.0 }

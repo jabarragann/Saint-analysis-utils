@@ -19,5 +19,6 @@ output_dir_structure:
 saint_config:
   saint_root: /home/juan95/research/discovery_grant/volumetric_drilling
   drill_size: 4
-  marker_namespace: /atracsys/drill_marker
+  drill_marker_namespace: /atracsys/drill_marker
+  pointer_marker_namespace: /atracsys/pointer_tool
 

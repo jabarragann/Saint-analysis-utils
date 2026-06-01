@@ -18,5 +18,6 @@ output_dir_structure:
 saint_config:
   saint_root: /home/saint/saint_2026/catkin_ws/src/saint_volumetric_drilling
   drill_size: 4
-  marker_namespace: /atracsys/drill_marker
+  drill_marker_namespace: /atracsys/drill_marker
+  pointer_marker_namespace: /atracsys/pointer_tool
 

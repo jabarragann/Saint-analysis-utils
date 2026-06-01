@@ -4,3 +4,4 @@ output
 output0/
 output_old/
 input/
+__pycache__/
