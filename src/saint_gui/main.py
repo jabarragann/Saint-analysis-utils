@@ -163,6 +163,9 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
                 print(f"[Create Phantom] Skipping backup, file not found: {src_path}")
                 continue
             dst = backup_dir / src_path.name
+            if dst.exists() and src_path.resolve() == dst.resolve():
+                print(f"[Create Phantom] Skipping backup, file already in backup dir: {src_path}")
+                continue
             print(f"[Create Phantom] Copying {src_path} -> {dst}")
             shutil.copy2(src_path, dst)
 
