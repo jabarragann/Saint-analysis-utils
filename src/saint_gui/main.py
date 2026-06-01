@@ -208,6 +208,8 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         drill_size = self.saint_config.get("drill_size", "")
         drill_marker_namespace = self.saint_config.get("drill_marker_namespace", "")
         pointer_marker_namespace = self.saint_config.get("pointer_marker_namespace", "")
+        drill_tool_tip = self.saint_config.get("drill_tool_tip", "drill_tip")
+        pointer_tool_tip = self.saint_config.get("pointer_tool_tip", "pointer_tip")
 
         args = [
             script,
@@ -216,6 +218,8 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
             "--phantom-path", phantom_path,
             "--drill-marker-namespace", str(drill_marker_namespace),
             "--pointer-marker-namespace", str(pointer_marker_namespace),
+            "--drill-tool-tip", str(drill_tool_tip),
+            "--pointer-tool-tip", str(pointer_tool_tip),
             "--output-dir", str(self.get_config_dir()),
         ]
         self._run_command(

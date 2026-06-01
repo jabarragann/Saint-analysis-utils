@@ -23,12 +23,13 @@ TEMPLATE_DIR = SCRIPT_DIR  / "config_templates"
 ANATOMICAL_ORIGIN_SUFFIX = "_Anatomical_Origin"
 
 
-def substitute_markers(text: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> str:
+def substitute_markers(text: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str, ambf_tool_tip: str = "") -> str:
     return (
         text.replace("<SAINT_ROOT>", saint_root)
             .replace("<DRILL_SIZE>", drill_size)
             .replace("<PHANTOM_PATH>", phantom_path)
             .replace("<MARKER_NAMESPACE>", marker_namespace)
+            .replace("<AMBF_TOOL_TIP>", ambf_tool_tip)
     )
 
 
@@ -74,9 +75,9 @@ def generate_tf_config(output_dir: Path, template_name: str, output_name: str, s
     (output_dir / output_name).write_text(text)
 
 
-def generate_registration_config(output_dir: Path, output_name: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str) -> None:
+def generate_registration_config(output_dir: Path, output_name: str, saint_root: str, drill_size: str, phantom_path: str, marker_namespace: str, ambf_tool_tip: str) -> None:
     src = TEMPLATE_DIR / "registration_config.yaml"
-    text = substitute_markers(src.read_text(), saint_root, drill_size, phantom_path, marker_namespace)
+    text = substitute_markers(src.read_text(), saint_root, drill_size, phantom_path, marker_namespace, ambf_tool_tip)
 
     config = yaml.safe_load(text)
 
@@ -95,6 +96,8 @@ def main():
     parser.add_argument("--phantom-path", required=True, help="Path to phantom YAML (substituted for <PHANTOM_PATH>)")
     parser.add_argument("--drill-marker-namespace", required=True, help="ROS topic namespace for the drill marker (substituted for <MARKER_NAMESPACE> in the drill configs), e.g. /atracsys/drill_marker")
     parser.add_argument("--pointer-marker-namespace", required=True, help="ROS topic namespace for the pointer tool (substituted for <MARKER_NAMESPACE> in the pointer configs), e.g. /atracsys/pointer_tool")
+    parser.add_argument("--drill-tool-tip", default="drill_tip", help="AMBF tooltip body name for the drill registration (substituted for <AMBF_TOOL_TIP>)")
+    parser.add_argument("--pointer-tool-tip", default="pointer_tip", help="AMBF tooltip body name for the pointer registration (substituted for <AMBF_TOOL_TIP>)")
     parser.add_argument("--output-dir", required=True, help="Directory to write generated config files")
     args = parser.parse_args()
 
@@ -111,8 +114,8 @@ def main():
     generate_tf_config(output_dir, "tf_config_drill.yaml", "tf_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
     generate_tf_config(output_dir, "tf_config_pointer.yaml", "tf_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
 
-    generate_registration_config(output_dir, "registration_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
-    generate_registration_config(output_dir, "registration_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
+    generate_registration_config(output_dir, "registration_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace, args.drill_tool_tip)
+    generate_registration_config(output_dir, "registration_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace, args.pointer_tool_tip)
 
     print(f"Wrote config files to {output_dir}")
 

@@ -22,4 +22,6 @@ saint_config:
   drill_size: 4
   drill_marker_namespace: /atracsys/drill_marker
   pointer_marker_namespace: /atracsys/pointer_tool
+  drill_tool_tip: drill_tip
+  pointer_tool_tip: pointer_tip
 

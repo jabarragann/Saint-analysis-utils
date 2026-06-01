@@ -1,6 +1,6 @@
 ## Pointer based registration
 pointer:
-  tooltip name: drill_tip # Rigid body that is attached to the tip of the tool
+  tooltip name: <AMBF_TOOL_TIP> # Rigid body that is attached to the tip of the tool
   name of points:
     - F_1 
     - F_2 
