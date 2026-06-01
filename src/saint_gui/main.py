@@ -10,6 +10,7 @@ import yaml
 from PyQt5.QtCore import QProcess, QTimer
 from PyQt5.QtWidgets import (
     QApplication,
+    QComboBox,
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
@@ -17,6 +18,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -217,14 +219,60 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
 
 
 class RunRegistrationPanel(ProcessRunnerPanel):
+    TF_LIST_OPTIONS = ["tf_config.yaml", "tf_config_drill.yaml"]
+
     def __init__(self, experiment_panel, parent=None):
         super().__init__("Run Registration", parent)
         self.experiment_panel = experiment_panel
 
         layout = QVBoxLayout(self)
+
+        tf_row = QHBoxLayout()
+        tf_label = QLabel("--tf_list")
+        tf_label.setMinimumWidth(140)
+        self.tf_list_combo = QComboBox()
+        self.tf_list_combo.addItems(self.TF_LIST_OPTIONS)
+        self.tf_list_combo.currentTextChanged.connect(self._on_tf_list_changed)
+        tf_row.addWidget(tf_label)
+        tf_row.addWidget(self.tf_list_combo)
+        layout.addLayout(tf_row)
+
+        self.command_edit = QTextEdit()
+        self.command_edit.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.command_edit.setPlainText(self._build_command(self.tf_list_combo.currentText()))
+        layout.addWidget(self.command_edit)
+
         self.run_button = QPushButton("Run Registration")
         self.run_button.clicked.connect(self._on_run)
         layout.addWidget(self.run_button)
+
+    def _build_command(self, tf_list):
+        program = "ambf_simulator"
+        args = [
+            "--launch_file", "launch_registration.yaml",
+            "-l", "0,1",
+            "--registration_config", "registration_config.yaml",
+            "--tf_list", tf_list,
+        ]
+        return shlex.join([program, *args])
+
+    def _on_tf_list_changed(self, tf_list):
+        # Replace only the --tf_list argument in the command shown, preserving
+        # any other manual edits the user made to the command text.
+        current = self.command_edit.toPlainText().strip()
+        if not current:
+            self.command_edit.setPlainText(self._build_command(tf_list))
+            return
+        tokens = shlex.split(current)
+        if "--tf_list" in tokens:
+            idx = tokens.index("--tf_list")
+            if idx + 1 < len(tokens):
+                tokens[idx + 1] = tf_list
+            else:
+                tokens.append(tf_list)
+        else:
+            tokens += ["--tf_list", tf_list]
+        self.command_edit.setPlainText(shlex.join(tokens))
 
     def _on_run(self):
         config_dir = self.experiment_panel.get_config_dir()
@@ -232,15 +280,16 @@ class RunRegistrationPanel(ProcessRunnerPanel):
             print(f"[Run Registration] Config dir does not exist: {config_dir}")
             return
 
-        args = [
-            "--launch_file", "launch_registration.yaml",
-            "-l", "0,1",
-            "--registration_config", "registration_config.yaml",
-            "--tf_list", "tf_config.yaml",
-        ]
+        command = self.command_edit.toPlainText().strip()
+        if not command:
+            print("[Run Registration] No command to run.")
+            return
+
+        tokens = shlex.split(command)
+        program, args = tokens[0], tokens[1:]
         self._run_command(
             label="Run Registration",
-            program="ambf_simulator",
+            program=program,
             args=args,
             cwd=str(config_dir),
             button=self.run_button,
