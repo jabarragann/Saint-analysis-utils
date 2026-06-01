@@ -1,43 +1,32 @@
 # List of Transformations used in ambf_tf_plugin
 # Author: Hisashi Ishida (hishida3@jhu.edu)
-# Date: 09.09.2024
 
 transformations:
   - TF world-atracsys_drill_marker
   - TF marker_body-drill_tip
-  - TF drill_tip-drill_body
+  - TF pointer_tip-drill_body
 
 TF world-atracsys_drill_marker: # Move drill with atracsys measurements
   parent: World
   child: marker
   type: ROS
-  # rostopic name: /atracsys/brain_lab_pointer/measured_cp
-  rostopic name: <MARKER_NAMESPACE>/measured_cp
+  rostopic name: /atracsys/pointer_tool/measured_cp
 
-#ADD HERE the pivot calibration transform.
 TF marker_body-drill_tip: 
   parent: marker
-  child: drill_tip # sim_assisted_drill_tip_reference
+  child: pointer_tip 
   type: FIXED
-  transformation: # from pivot calibration
-    # Experiments 02-20-2026
-    # position: {x: 0.0, y: 0.0 , z: 0.0} #drill
-    # position: {x: 0.115027, y: -0.126772, z: -0.0554542} #drill
-    # orientation: { r: 0.0, p: 0.0, y: 0.0 }
-    # 4mm
-    position: {x: 0.107887, y: -0.125442, z: -0.0544327}
+  transformation: # pointer tool - pivot calibration
+    position: {x: 0.0122844, y: -0.131931, z: -0.031379}
+    Mean calibration error: 0.000291994
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
-    Mean calibration error: 0.000360372
-
-
-
 
 ## This sets the drill body orientation with respect to the drill reference body.
 # This value came from doing two pivot calibrations with shafts of different lenghts
 # This enables you to calculate the drill's body angle with respect to the ref body.
-TF drill_tip-drill_body:
-  parent: drill_tip
-  child: drill_body_<DRILL_SIZE>mm
+TF pointer_tip-drill_body:
+  parent: pointer_tip
+  child: drill_body_4mm
   type: FIXED
   transformation:
     position: { x: 0.0, y: 0.0, z: 0.0 }
