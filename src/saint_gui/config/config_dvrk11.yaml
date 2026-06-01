@@ -7,7 +7,8 @@ fiducials_path: /home/jbarrag3/research/saint_system/nrrd_to_adf/data/sample_dat
 copy_input_files: true 
 
 script_paths:
-  nrrd_to_adf_script: /home/jbarrag3/research/saint_system/nrrd_to_adf/nrrd_to_adf.py 
+  nrrd_to_adf_script: /home/jbarrag3/research/saint_system/nrrd_to_adf/nrrd_to_adf.py
+  update_seg_nrrd_script: /home/jbarrag3/research/saint_system/nrrd_to_adf/update_seg_nrrd_data_from_pngs.py
   create_saint_config_script: /home/jbarrag3/research/saint_system/Saint-analysis-utils/src/config_creation/create_saint_config.py 
 
 output_dir_structure:

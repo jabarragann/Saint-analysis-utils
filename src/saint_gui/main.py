@@ -25,9 +25,10 @@ from PyQt5.QtWidgets import (
 
 
 class PathField(QWidget):
-    def __init__(self, label, select_directory=True, parent=None):
+    def __init__(self, label, select_directory=True, save_file=False, parent=None):
         super().__init__(parent)
         self.select_directory = select_directory
+        self.save_file = save_file
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -46,7 +47,9 @@ class PathField(QWidget):
         layout.addWidget(self.browse_button)
 
     def _browse(self):
-        if self.select_directory:
+        if self.save_file:
+            path, _ = QFileDialog.getSaveFileName(self, "Select Output File")
+        elif self.select_directory:
             path = QFileDialog.getExistingDirectory(self, "Select Directory")
         else:
             path, _ = QFileDialog.getOpenFileName(self, "Select File")
@@ -106,6 +109,7 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         scripts = config.get("script_paths", {}) or {}
         self.nrrd_to_adf_script = scripts.get("nrrd_to_adf_script", "")
         self.create_saint_config_script = scripts.get("create_saint_config_script", "")
+        self.update_seg_nrrd_script = scripts.get("update_seg_nrrd_script", "")
         self.saint_config = config.get("saint_config", {}) or {}
 
         layout = QVBoxLayout(self)
@@ -220,6 +224,90 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
             args=args,
             cwd=str(Path(script).parent) if script else None,
             button=self.create_config_button,
+        )
+
+
+class UpdateSegmentationPanel(ProcessRunnerPanel):
+    """Regenerate a .seg.nrrd from a folder of (possibly edited) PNG slices.
+
+    Runs update_seg_nrrd_data_from_pngs.py, reusing the backed-up input
+    segmentation for its header/colors. The slices folder defaults to the
+    experiment's config/resources dir (where SAINT writes the PNGs) and the
+    output field is pre-filled with output_dir/ambf_models/ so the user only
+    has to append a file name.
+    """
+
+    SLICES_PREFIX = "plane00"
+
+    def __init__(self, experiment_panel, parent=None):
+        super().__init__("Update Segmentation from PNGs", parent)
+        self.experiment_panel = experiment_panel
+        self.update_seg_nrrd_script = experiment_panel.update_seg_nrrd_script
+
+        layout = QVBoxLayout(self)
+
+        self.slices_field = PathField("PNG slices folder", select_directory=True)
+        self.output_field = PathField("output .seg.nrrd", select_directory=False, save_file=True)
+
+        self.slices_field.line_edit.setText(str(experiment_panel.get_config_dir() / "resources"))
+        # Pre-fill the output with the ambf_models dir (trailing separator) so it
+        # is clearly incomplete until the user appends a file name.
+        default_out = str(experiment_panel.get_output_dir() / "ambf_models") + os.sep
+        self.output_field.line_edit.setText(default_out)
+        self.output_field.line_edit.setPlaceholderText("append a .seg.nrrd file name (not a directory)")
+
+        self.update_button = QPushButton("Update Segmentation")
+        self.update_button.clicked.connect(self._on_run)
+
+        layout.addWidget(self.slices_field)
+        layout.addWidget(self.output_field)
+        layout.addWidget(self.update_button)
+
+    def _input_nrrd(self):
+        # -n is the segmentation selected for the phantom, taken from the
+        # backed-up copy in the input_backup dir.
+        seg_name = Path(self.experiment_panel.segmentation_field.text()).name
+        return self.experiment_panel.get_input_backup_dir() / seg_name
+
+    def _on_run(self):
+        script = self.update_seg_nrrd_script
+        if not script:
+            print("[Update Segmentation] No update_seg_nrrd_script configured.")
+            return
+
+        nrrd_file = self._input_nrrd()
+        if not nrrd_file.is_file():
+            print(f"[Update Segmentation] Input .seg.nrrd not found in backup dir: {nrrd_file}")
+            return
+
+        slices_path = Path(self.slices_field.text())
+        if not slices_path.is_dir():
+            print(f"[Update Segmentation] Slices folder does not exist: {slices_path}")
+            return
+
+        output_text = self.output_field.text().strip()
+        if not output_text:
+            print("[Update Segmentation] No output file specified.")
+            return
+        output_file = Path(output_text)
+        if output_text.endswith(("/", os.sep)) or not output_file.name or output_file.is_dir():
+            print(f"[Update Segmentation] Output must be a file name, not a directory: {output_text}")
+            return
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        args = [
+            script,
+            "-n", str(nrrd_file),
+            "-s", str(slices_path),
+            "-p", self.SLICES_PREFIX,
+            "-o", str(output_file),
+        ]
+        self._run_command(
+            label="Update Segmentation",
+            program=sys.executable,
+            args=args,
+            cwd=str(Path(script).parent),
+            button=self.update_button,
         )
 
 
@@ -414,6 +502,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         experiment_panel = ExperimentSetupPanel(config)
         layout.addWidget(experiment_panel)
+        layout.addWidget(UpdateSegmentationPanel(experiment_panel))
         layout.addWidget(RunRegistrationPanel(experiment_panel))
         layout.addWidget(RunSaintPanel(experiment_panel))
         layout.addWidget(DataRecordingPanel(experiment_panel))

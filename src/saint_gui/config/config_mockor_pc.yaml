@@ -7,6 +7,7 @@ copy_input_files: true
 
 script_paths:
   nrrd_to_adf_script: /home/saint/saint_2026/saint_utils/nrrd_to_adf_hisashi/nrrd_to_adf.py
+  update_seg_nrrd_script: /home/saint/saint_2026/saint_utils/nrrd_to_adf_hisashi/update_seg_nrrd_data_from_pngs.py
   create_saint_config_script: /home/saint/saint_2026/saint_utils/Saint-analysis-utils/src/config_creation/create_saint_config.py
 
 output_dir_structure:
