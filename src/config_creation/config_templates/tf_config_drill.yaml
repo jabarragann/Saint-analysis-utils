@@ -22,8 +22,12 @@ TF marker_body-drill_tip:
   type: FIXED
   transformation: # from pivot calibration
     # Pivot performed on 06-01-2026 by Hisashi on 4mm
-    position: {x: 0.107766, y: -0.124998, z: -0.0536181} # Hisashi Generated
-    Mean calibration error: 0.000313192
+    # position: {x: 0.107766, y: -0.124998, z: -0.0536181} # Hisashi Generated
+    # Mean calibration error: 0.000313192
+
+    # Pivot performed on 06-02-2026 on 4mm
+    position: {x: 0.10745, y: -0.125701, z: -0.0542}
+    Mean calibration error: 0.000281953
 
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
 

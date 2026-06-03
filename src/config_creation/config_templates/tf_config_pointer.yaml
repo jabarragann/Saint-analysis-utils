@@ -20,8 +20,12 @@ TF marker_body-pointer_tip:
   type: FIXED
   transformation: # pointer tool - pivot calibration
     # Pivot performed on 06-01-2026
-    position: {x: 0.0122844, y: -0.131931, z: -0.031379}
-    Mean calibration error: 0.000291994
+    # position: {x: 0.0122844, y: -0.131931, z: -0.031379}
+    # Mean calibration error: 0.000291994
+
+    # Pivot performed on 06-02-2026 pointer tool
+    position: {x: 0.0124837, y: -0.13179, z: -0.0321433}
+    Mean calibration error: 0.000376802
 
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
 
