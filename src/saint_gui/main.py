@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 import shlex
 import shutil
@@ -105,6 +106,7 @@ class ProcessRunnerPanel(QGroupBox):
 class ExperimentSetupPanel(ProcessRunnerPanel):
     def __init__(self, config, parent=None):
         super().__init__("Experiment Setup", parent)
+        self.config = config
 
         scripts = config.get("script_paths", {}) or {}
         self.nrrd_to_adf_script = scripts.get("nrrd_to_adf_script", "")
@@ -134,14 +136,25 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         self.create_config_button = QPushButton("Create Config")
         self.create_config_button.clicked.connect(self._on_create_config)
 
+        self.save_config_button = QPushButton("Save GUI Config")
+
         button_row = QHBoxLayout()
         button_row.addWidget(self.create_phantom_button)
         button_row.addWidget(self.create_config_button)
+        button_row.addWidget(self.save_config_button)
 
         layout.addWidget(self.output_dir_field)
         layout.addWidget(self.segmentation_field)
         layout.addWidget(self.fiducials_field)
         layout.addLayout(button_row)
+
+    def collect_config(self):
+        """Current values of this panel's editable fields, as config keys."""
+        return {
+            "output_dir": self.output_dir_field.text(),
+            "segmentation_path": self.segmentation_field.text(),
+            "fiducials_path": self.fiducials_field.text(),
+        }
 
     def get_output_dir(self):
         return Path(self.output_dir_field.text())
@@ -442,6 +455,27 @@ class RunSaintPanel(ProcessRunnerPanel):
         layout.addLayout(row)
         return edit
 
+    @staticmethod
+    def _as_number(text, cast):
+        # Keep config values numeric when possible, but fall back to the raw
+        # string so a manual edit is never silently dropped on save.
+        try:
+            return cast(text.strip())
+        except (TypeError, ValueError):
+            return text.strip()
+
+    def collect_config(self):
+        """Current SAINT run parameters, as a config fragment."""
+        return {
+            "saint_run": {
+                "hmd_window_disp": self._as_number(self.hmd_window_disp_edit.text(), float),
+                "fix_sagittal_slice": self.fix_sagittal_slice,
+                "sagittal_slice_idx": self._as_number(self.sagittal_slice_idx_edit.text(), int),
+                "hmd_window_offset_h": self._as_number(self.hmd_window_offset_h_edit.text(), float),
+                "hmd_window_offset_v": self._as_number(self.hmd_window_offset_v_edit.text(), float),
+            }
+        }
+
     def _on_run(self):
         config_dir = self.experiment_panel.get_config_dir()
         if not config_dir.is_dir():
@@ -535,14 +569,34 @@ class MainWindow(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
 
+        self.config = config
+
         layout = QVBoxLayout(central)
-        experiment_panel = ExperimentSetupPanel(config)
-        layout.addWidget(experiment_panel)
-        layout.addWidget(RunRegistrationPanel(experiment_panel))
-        layout.addWidget(RunSaintPanel(experiment_panel, config))
-        layout.addWidget(DataRecordingPanel(experiment_panel))
-        layout.addWidget(UpdateSegmentationPanel(experiment_panel))
+        self.experiment_panel = ExperimentSetupPanel(config)
+        self.run_saint_panel = RunSaintPanel(self.experiment_panel, config)
+        layout.addWidget(self.experiment_panel)
+        layout.addWidget(RunRegistrationPanel(self.experiment_panel))
+        layout.addWidget(self.run_saint_panel)
+        layout.addWidget(DataRecordingPanel(self.experiment_panel))
+        layout.addWidget(UpdateSegmentationPanel(self.experiment_panel))
         layout.addStretch()
+
+        self.experiment_panel.save_config_button.clicked.connect(self._save_gui_config)
+
+    def _save_gui_config(self):
+        # Start from the loaded config so non-editable sections (script_paths,
+        # output_dir_structure, saint_config, ...) are preserved verbatim, then
+        # overlay the values currently set in the GUI.
+        output_config = copy.deepcopy(self.config)
+        output_config.update(self.experiment_panel.collect_config())
+        output_config.update(self.run_saint_panel.collect_config())
+
+        config_dir = self.experiment_panel.get_config_dir()
+        config_dir.mkdir(parents=True, exist_ok=True)
+        out_path = config_dir / "gui_config.yaml"
+        with out_path.open("w") as f:
+            yaml.safe_dump(output_config, f, sort_keys=False)
+        print(f"[Save GUI Config] Wrote {out_path}")
 
 
 def load_config(config_path):
