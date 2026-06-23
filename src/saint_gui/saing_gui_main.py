@@ -441,7 +441,7 @@ class RunSaintPanel(ProcessRunnerPanel):
         )
 
         self.run_button = QPushButton("Run SAINT")
-        self.run_button.clicked.connect(self._on_run)
+        self.run_button.clicked.connect(self._on_click)
         layout.addWidget(self.run_button)
 
     @staticmethod
@@ -476,12 +476,22 @@ class RunSaintPanel(ProcessRunnerPanel):
             }
         }
 
-    def _on_run(self):
+    def _is_running(self):
+        return self.process is not None and self.process.state() != QProcess.NotRunning
+
+    def _on_click(self):
+        if self._is_running():
+            self._stop_saint()
+        else:
+            self._start_saint()
+
+    def _start_saint(self):
         config_dir = self.experiment_panel.get_config_dir()
         if not config_dir.is_dir():
             print(f"[Run SAINT] Config dir does not exist: {config_dir}")
             return
 
+        program = "ambf_simulator"
         args = [
             "--launch_file", "launch.yaml",
             "-l", "6,10,14",
@@ -494,13 +504,37 @@ class RunSaintPanel(ProcessRunnerPanel):
             "--hmd_window_offset_h", self.hmd_window_offset_h_edit.text().strip(),
             "--hmd_window_offset_v", self.hmd_window_offset_v_edit.text().strip(),
         ]
-        self._run_command(
-            label="Run SAINT",
-            program="ambf_simulator",
-            args=args,
-            cwd=str(config_dir),
-            button=self.run_button,
-        )
+
+        print("[Run SAINT] Running command:")
+        print(shlex.join([program, *args]))
+
+        self._current_label = "Run SAINT"
+        self._current_button = self.run_button
+        self.process = QProcess(self)
+        self.process.setWorkingDirectory(str(config_dir))
+        self.process.readyReadStandardOutput.connect(self._on_stdout)
+        self.process.readyReadStandardError.connect(self._on_stderr)
+        self.process.finished.connect(self._on_saint_finished)
+        self.process.start(program, args)
+        self.run_button.setText("Stop SAINT")
+        self.run_button.setStyleSheet("background-color: #2ecc71; color: white;")
+
+    def _stop_saint(self):
+        pid = int(self.process.processId())
+        if pid <= 0:
+            print("[Run SAINT] No PID available; cannot send SIGINT.")
+            return
+        print(f"[Run SAINT] Sending SIGINT to PID {pid}")
+        try:
+            os.kill(pid, signal.SIGINT)
+        except ProcessLookupError:
+            print(f"[Run SAINT] Process {pid} not found.")
+
+    def _on_saint_finished(self, exit_code, _exit_status):
+        print(f"[Run SAINT finished with exit code {exit_code}]")
+        self.run_button.setText("Run SAINT")
+        self.run_button.setStyleSheet("")
+        self.run_button.setEnabled(True)
 
 
 class DataRecordingPanel(ProcessRunnerPanel):
