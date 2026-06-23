@@ -25,3 +25,10 @@ saint_config:
   drill_tool_tip: drill_tip
   pointer_tool_tip: pointer_tip
 
+
+saint_run:
+  hmd_window_disp: 0.1
+  fix_sagittal_slice: true
+  sagittal_slice_idx: 70
+  hmd_window_offset_h: 0.0
+  hmd_window_offset_v: 0.0

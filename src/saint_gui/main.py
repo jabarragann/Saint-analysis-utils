@@ -406,14 +406,41 @@ class RunRegistrationPanel(ProcessRunnerPanel):
 
 
 class RunSaintPanel(ProcessRunnerPanel):
-    def __init__(self, experiment_panel, parent=None):
+    def __init__(self, experiment_panel, config=None, parent=None):
         super().__init__("Run SAINT", parent)
         self.experiment_panel = experiment_panel
+        saint_run = (config or {}).get("saint_run", {}) or {}
+        self.fix_sagittal_slice = bool(saint_run.get("fix_sagittal_slice", True))
 
         layout = QVBoxLayout(self)
+
+        self.hmd_window_disp_edit = self._add_param_row(
+            layout, "--hmd_window_disp", str(saint_run.get("hmd_window_disp", 0.1))
+        )
+        self.sagittal_slice_idx_edit = self._add_param_row(
+            layout, "--sagittal_slice_idx", str(saint_run.get("sagittal_slice_idx", 70))
+        )
+        self.hmd_window_offset_h_edit = self._add_param_row(
+            layout, "--hmd_window_offset_h", str(saint_run.get("hmd_window_offset_h", 0.0))
+        )
+        self.hmd_window_offset_v_edit = self._add_param_row(
+            layout, "--hmd_window_offset_v", str(saint_run.get("hmd_window_offset_v", 0.0))
+        )
+
         self.run_button = QPushButton("Run SAINT")
         self.run_button.clicked.connect(self._on_run)
         layout.addWidget(self.run_button)
+
+    @staticmethod
+    def _add_param_row(layout, label_text, default):
+        row = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setMinimumWidth(140)
+        edit = QLineEdit(default)
+        row.addWidget(label)
+        row.addWidget(edit)
+        layout.addLayout(row)
+        return edit
 
     def _on_run(self):
         config_dir = self.experiment_panel.get_config_dir()
@@ -427,6 +454,11 @@ class RunSaintPanel(ProcessRunnerPanel):
             "--mute", "true",
             "--nt", "1",
             "--tf_list", "tf_config_drill.yaml",
+            "--hmd_window_disp", self.hmd_window_disp_edit.text().strip(),
+            "--fix_sagittal_slice", "true" if self.fix_sagittal_slice else "false",
+            "--sagittal_slice_idx", self.sagittal_slice_idx_edit.text().strip(),
+            "--hmd_window_offset_h", self.hmd_window_offset_h_edit.text().strip(),
+            "--hmd_window_offset_v", self.hmd_window_offset_v_edit.text().strip(),
         ]
         self._run_command(
             label="Run SAINT",
@@ -507,7 +539,7 @@ class MainWindow(QMainWindow):
         experiment_panel = ExperimentSetupPanel(config)
         layout.addWidget(experiment_panel)
         layout.addWidget(RunRegistrationPanel(experiment_panel))
-        layout.addWidget(RunSaintPanel(experiment_panel))
+        layout.addWidget(RunSaintPanel(experiment_panel, config))
         layout.addWidget(DataRecordingPanel(experiment_panel))
         layout.addWidget(UpdateSegmentationPanel(experiment_panel))
         layout.addStretch()
