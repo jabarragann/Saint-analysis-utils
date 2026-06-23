@@ -506,10 +506,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         experiment_panel = ExperimentSetupPanel(config)
         layout.addWidget(experiment_panel)
-        layout.addWidget(UpdateSegmentationPanel(experiment_panel))
         layout.addWidget(RunRegistrationPanel(experiment_panel))
         layout.addWidget(RunSaintPanel(experiment_panel))
         layout.addWidget(DataRecordingPanel(experiment_panel))
+        layout.addWidget(UpdateSegmentationPanel(experiment_panel))
         layout.addStretch()
 
 
