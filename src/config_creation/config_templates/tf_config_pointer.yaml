@@ -24,8 +24,11 @@ TF marker_body-pointer_tip:
     # Mean calibration error: 0.000291994
 
     # Pivot performed on 06-02-2026 pointer tool
-    position: {x: 0.0124837, y: -0.13179, z: -0.0321433}
-    Mean calibration error: 0.000376802
+    # position: {x: 0.0124837, y: -0.13179, z: -0.0321433}
+    # Mean calibration error: 0.000376802
+    # Pivot performed on 07-25-2026
+    position: {x: 0.0124803, y: -0.132299, z: -0.0316885}
+    Mean calibration error: 0.000402564
 
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
 

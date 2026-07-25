@@ -26,8 +26,12 @@ TF marker_body-drill_tip:
     # Mean calibration error: 0.000313192
 
     # Pivot performed on 06-02-2026 on 4mm
-    position: {x: 0.10745, y: -0.125701, z: -0.0542}
-    Mean calibration error: 0.000281953
+    # position: {x: 0.10745, y: -0.125701, z: -0.0542}
+    # Mean calibration error: 0.000281953
+    
+    # Pivot performed on 07-25-2026
+    position: {x: -0.130764, y: -0.12647, z: 0.054971}
+    Mean calibration error: 0.000265385
 
     orientation: { r: 0.0, p: 0.0, y: 0.0 }
 
