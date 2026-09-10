@@ -5,6 +5,7 @@ import shlex
 import shutil
 import signal
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -538,11 +539,28 @@ class RunSaintPanel(ProcessRunnerPanel):
 
 
 class DataRecordingPanel(ProcessRunnerPanel):
+    # Record the AMBF world state plus every topic under the /atracsys/ namespace,
+    # skipping the *_marker/period_statistics topics (cisst_msgs type is not
+    # available to rosbag2, so it only warns and drops them anyway).
+    RECORD_TOPICS = ["/ambf/env/World/State"]
+    RECORD_TOPIC_REGEX = "/atracsys/.*"
+    EXCLUDE_TOPIC_REGEX = ".*/period_statistics"
+
     def __init__(self, experiment_panel, parent=None):
         super().__init__("Data Recording", parent)
         self.experiment_panel = experiment_panel
 
         layout = QVBoxLayout(self)
+
+        suffix_row = QHBoxLayout()
+        suffix_label = QLabel("recording suffix")
+        suffix_label.setMinimumWidth(140)
+        self.suffix_edit = QLineEdit()
+        self.suffix_edit.setPlaceholderText("appended after the timestamp in the recording dir name")
+        suffix_row.addWidget(suffix_label)
+        suffix_row.addWidget(self.suffix_edit)
+        layout.addLayout(suffix_row)
+
         self.record_button = QPushButton("Record Data")
         self.record_button.clicked.connect(self._on_click)
         layout.addWidget(self.record_button)
@@ -556,12 +574,28 @@ class DataRecordingPanel(ProcessRunnerPanel):
         else:
             self._start_recording()
 
+    def _bags_dir(self):
+        return self.experiment_panel.get_output_dir() / "bags"
+
+    def _recording_dir(self):
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        suffix = self.suffix_edit.text().strip().replace(" ", "_")
+        name = f"{timestamp}_{suffix}" if suffix else timestamp
+        return self._bags_dir() / name
+
     def _start_recording(self):
-        bag_dir = self.experiment_panel.get_ros_bag_dir()
-        bag_dir.mkdir(parents=True, exist_ok=True)
+        bags_dir = self._bags_dir()
+        bags_dir.mkdir(parents=True, exist_ok=True)
+        recording_dir = self._recording_dir()
 
         program = "ros2"
-        args = ["bag", "record", "/ambf/env/World/State"]
+        args = [
+            "bag", "record",
+            *self.RECORD_TOPICS,
+            "--regex", self.RECORD_TOPIC_REGEX,
+            "--exclude", self.EXCLUDE_TOPIC_REGEX,
+            "-o", str(recording_dir),
+        ]
 
         print("[Data Recording] Running command:")
         print(shlex.join([program, *args]))
@@ -569,7 +603,7 @@ class DataRecordingPanel(ProcessRunnerPanel):
         self._current_label = "Data Recording"
         self._current_button = self.record_button
         self.process = QProcess(self)
-        self.process.setWorkingDirectory(str(bag_dir))
+        self.process.setWorkingDirectory(str(bags_dir))
         self.process.readyReadStandardOutput.connect(self._on_stdout)
         self.process.readyReadStandardError.connect(self._on_stderr)
         self.process.finished.connect(self._on_recording_finished)
