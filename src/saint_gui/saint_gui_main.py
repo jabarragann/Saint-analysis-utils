@@ -441,6 +441,20 @@ class RunSaintPanel(ProcessRunnerPanel):
             layout, "--hmd_window_offset_v", str(saint_run.get("hmd_window_offset_v", 0.0))
         )
 
+        self.command_edit = QTextEdit()
+        self.command_edit.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.command_edit.setPlainText(self._build_command())
+        layout.addWidget(self.command_edit)
+
+        # Keep the shown command in sync with any parameter edit above.
+        for edit in (
+            self.hmd_window_disp_edit,
+            self.sagittal_slice_idx_edit,
+            self.hmd_window_offset_h_edit,
+            self.hmd_window_offset_v_edit,
+        ):
+            edit.textChanged.connect(self._refresh_command)
+
         self.run_button = QPushButton("Run SAINT")
         self.run_button.clicked.connect(self._on_click)
         layout.addWidget(self.run_button)
@@ -477,6 +491,26 @@ class RunSaintPanel(ProcessRunnerPanel):
             }
         }
 
+    def _build_command(self):
+        program = "ambf_simulator"
+        args = [
+            "--launch_file", "launch.yaml",
+            "-l", "6,10,14",
+            "--mute", "true",
+            "--nt", "1",
+            "--tf_list", "tf_config_drill.yaml",
+            "--cpf", "main_camera_info.yaml",
+            "--hmd_window_disp", self.hmd_window_disp_edit.text().strip(),
+            "--fix_sagittal_slice", "true" if self.fix_sagittal_slice else "false",
+            "--sagittal_slice_idx", self.sagittal_slice_idx_edit.text().strip(),
+            "--hmd_window_offset_h", self.hmd_window_offset_h_edit.text().strip(),
+            "--hmd_window_offset_v", self.hmd_window_offset_v_edit.text().strip(),
+        ]
+        return shlex.join([program, *args])
+
+    def _refresh_command(self):
+        self.command_edit.setPlainText(self._build_command())
+
     def _is_running(self):
         return self.process is not None and self.process.state() != QProcess.NotRunning
 
@@ -492,19 +526,13 @@ class RunSaintPanel(ProcessRunnerPanel):
             print(f"[Run SAINT] Config dir does not exist: {config_dir}")
             return
 
-        program = "ambf_simulator"
-        args = [
-            "--launch_file", "launch.yaml",
-            "-l", "6,10,14",
-            "--mute", "true",
-            "--nt", "1",
-            "--tf_list", "tf_config_drill.yaml",
-            "--hmd_window_disp", self.hmd_window_disp_edit.text().strip(),
-            "--fix_sagittal_slice", "true" if self.fix_sagittal_slice else "false",
-            "--sagittal_slice_idx", self.sagittal_slice_idx_edit.text().strip(),
-            "--hmd_window_offset_h", self.hmd_window_offset_h_edit.text().strip(),
-            "--hmd_window_offset_v", self.hmd_window_offset_v_edit.text().strip(),
-        ]
+        command = self.command_edit.toPlainText().strip()
+        if not command:
+            print("[Run SAINT] No command to run.")
+            return
+
+        tokens = shlex.split(command)
+        program, args = tokens[0], tokens[1:]
 
         print("[Run SAINT] Running command:")
         print(shlex.join([program, *args]))
