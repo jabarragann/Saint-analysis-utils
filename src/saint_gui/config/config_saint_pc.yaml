@@ -1,24 +1,25 @@
+output_dir: /home/saint/saint/python/Saint-analysis-utils/output/experiment_2026-09-17-Adnan
 
-output_dir: /home/saint/saint2026/saint_utils/Saint-analysis-utils/output 
+segmentation_path: /home/saint/saint/python/Saint-analysis-utils/output/experiment_2026-09-17-Adnan/input_backup/PLV2_007_D00_seg.seg.nrrd
+fiducials_path: /home/saint/saint/python/Saint-analysis-utils/output/experiment_2026-09-17-Adnan/input_backup/M.mrk.json
 
-segmentation_path: /home/saint/saint2026/saint_utils/Saint-analysis-utils/input/P01_05_pre.seg.nrrd
-fiducials_path: /home/saint/saint2026/saint_utils/Saint-analysis-utils/input/P01_05_pre.mrk.json
-
-copy_input_files: true 
+copy_input_files: true
 
 script_paths:
-  nrrd_to_adf_script: /home/saint/saint2026/saint_utils/nrrd_to_adf/nrrd_to_adf.py 
-  update_seg_nrrd_script: /home/saint/saint2026/saint_utils/nrrd_to_adf/update_seg_nrrd_data_from_pngs.py  
-  create_saint_config_script: /home/saint/saint2026/saint_utils/Saint-analysis-utils/src/config_creation/create_saint_config.py  
+  nrrd_to_adf_script: /home/saint/saint/python/nrrd_to_adf/nrrd_to_adf.py
+  update_seg_nrrd_script: /home/saint/saint/python/nrrd_to_adf/update_seg_nrrd_data_from_pngs.py
+  create_saint_config_script: /home/saint/saint/python/Saint-analysis-utils/src/config_creation/create_saint_config.py
+
 
 output_dir_structure:
   phantom_dir: phantom
   config_dir: config
-  input_backup_dir: input_backup 
+  input_backup_dir: input_backup
   ros_bag_dir: ros_bag
 
+
 saint_config:
-  saint_root: /home/saint/ros2_ws/saint_ws/src/saint_volumetric_drilling  
+  saint_root: /home/saint/saint/saint_ws/src/saint/volumetric_drilling_saint
   drill_size: 4
   drill_marker_namespace: /atracsys/drill_marker
   pointer_marker_namespace: /atracsys/pointer_tool
@@ -27,8 +28,8 @@ saint_config:
 
 
 saint_run:
-  hmd_window_disp: 0.1
+  hmd_window_disp: 0.1795
   fix_sagittal_slice: true
-  sagittal_slice_idx: 70
-  hmd_window_offset_h: 0.0
-  hmd_window_offset_v: 0.0
+  sagittal_slice_idx: 51
+  hmd_window_offset_h: 0.14
+  hmd_window_offset_v: -0.07
