@@ -420,10 +420,6 @@ class RunRegistrationPanel(ProcessRunnerPanel):
 
 
 class RunSaintPanel(ProcessRunnerPanel):
-    # ambf_simulator floods stderr with this cisst/ROS deserialization warning;
-    # it is filtered out at the shell level so the GUI log stays readable.
-    STDERR_FILTER = "sequence size exceeds remaining buffer"
-
     def __init__(self, experiment_panel, config=None, parent=None):
         super().__init__("Run SAINT", parent)
         self.experiment_panel = experiment_panel
@@ -538,17 +534,8 @@ class RunSaintPanel(ProcessRunnerPanel):
         tokens = shlex.split(command)
         program, args = tokens[0], tokens[1:]
 
-        # Run through bash so a process-substitution grep can drop the known
-        # noisy stderr line. `exec` replaces the shell with ambf_simulator, so
-        # processId() (and the SIGINT in _stop_saint) still targets the real
-        # process; the grep is reparented and exits on EOF when it closes.
-        shell_command = "exec {} 2> >(grep -v {} >&2)".format(
-            shlex.join([program, *args]),
-            shlex.quote(self.STDERR_FILTER),
-        )
-
         print("[Run SAINT] Running command:")
-        print(shell_command)
+        print(shlex.join([program, *args]))
 
         self._current_label = "Run SAINT"
         self._current_button = self.run_button
@@ -557,7 +544,7 @@ class RunSaintPanel(ProcessRunnerPanel):
         self.process.readyReadStandardOutput.connect(self._on_stdout)
         self.process.readyReadStandardError.connect(self._on_stderr)
         self.process.finished.connect(self._on_saint_finished)
-        self.process.start("bash", ["-c", shell_command])
+        self.process.start(program, args)
         self.run_button.setText("Stop SAINT")
         self.run_button.setStyleSheet("background-color: #2ecc71; color: white;")
 
