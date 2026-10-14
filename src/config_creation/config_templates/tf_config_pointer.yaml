@@ -13,6 +13,11 @@ TF world-atracsys_drill_marker: # Move drill with atracsys measurements
   # Example
   # rostopic name: /atracsys/pointer_tool/measured_cp
   rostopic name: <MARKER_NAMESPACE>/measured_cp
+  # Publishes /ambf/tf_plugin/tracking_valid (std_msgs/Bool) for multiview_panels
+  # to gray out the navigation views. Only one tracked tool is supported.
+  tracking status:
+    timeout ms: 50   # valid -> invalid after this long without a valid sample
+    recover ms: 200  # invalid -> valid after valid samples for this long (anti-flicker)
 
 TF marker_body-pointer_tip: 
   parent: marker
