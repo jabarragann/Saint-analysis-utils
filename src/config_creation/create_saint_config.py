@@ -93,29 +93,43 @@ def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--saint-root", required=True, help="Value to substitute for <SAINT_ROOT>")
     parser.add_argument("--drill-size", required=True, help="Value to substitute for <DRILL_SIZE>")
-    parser.add_argument("--phantom-path", required=True, help="Path to phantom YAML (substituted for <PHANTOM_PATH>)")
+    parser.add_argument("--phantom-path", default=None, help="Path to phantom YAML (substituted for <PHANTOM_PATH>). Required unless --only tf.")
     parser.add_argument("--drill-marker-namespace", required=True, help="ROS topic namespace for the drill marker (substituted for <MARKER_NAMESPACE> in the drill configs), e.g. /atracsys/drill_marker")
     parser.add_argument("--pointer-marker-namespace", required=True, help="ROS topic namespace for the pointer tool (substituted for <MARKER_NAMESPACE> in the pointer configs), e.g. /atracsys/pointer_tool")
     parser.add_argument("--drill-tool-tip", default="drill_tip", help="AMBF tooltip body name for the drill registration (substituted for <AMBF_TOOL_TIP>)")
     parser.add_argument("--pointer-tool-tip", default="pointer_tip", help="AMBF tooltip body name for the pointer registration (substituted for <AMBF_TOOL_TIP>)")
     parser.add_argument("--output-dir", required=True, help="Directory to write generated config files")
+    parser.add_argument(
+        "--only",
+        choices=["all", "launch", "tf"],
+        default="all",
+        help="Which files to generate: 'launch' = launch.yaml, launch_registration.yaml and the "
+             "registration configs (all need the phantom); 'tf' = tf_config_drill/pointer.yaml; "
+             "'all' (default) = both.",
+    )
     args = parser.parse_args()
+
+    if args.only in ("all", "launch") and not args.phantom_path:
+        parser.error("--phantom-path is required unless --only tf")
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    phantom_path = str(Path(args.phantom_path).resolve())
+    phantom_path = str(Path(args.phantom_path).resolve()) if args.phantom_path else ""
 
-    # The launch files don't reference <MARKER_NAMESPACE>; the drill namespace is
-    # passed only to satisfy the substitution helper's signature.
-    generate_launch(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
-    generate_launch_registration(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+    if args.only in ("all", "launch"):
+        # The launch files don't reference <MARKER_NAMESPACE>; the drill namespace is
+        # passed only to satisfy the substitution helper's signature.
+        generate_launch(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+        generate_launch_registration(output_dir, args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
 
-    generate_tf_config(output_dir, "tf_config_drill.yaml", "tf_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
-    generate_tf_config(output_dir, "tf_config_pointer.yaml", "tf_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
+        # Registration configs need the phantom's body names, so they belong with the launch files.
+        generate_registration_config(output_dir, "registration_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace, args.drill_tool_tip)
+        generate_registration_config(output_dir, "registration_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace, args.pointer_tool_tip)
 
-    generate_registration_config(output_dir, "registration_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace, args.drill_tool_tip)
-    generate_registration_config(output_dir, "registration_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace, args.pointer_tool_tip)
+    if args.only in ("all", "tf"):
+        generate_tf_config(output_dir, "tf_config_drill.yaml", "tf_config_drill.yaml", args.saint_root, args.drill_size, phantom_path, args.drill_marker_namespace)
+        generate_tf_config(output_dir, "tf_config_pointer.yaml", "tf_config_pointer.yaml", args.saint_root, args.drill_size, phantom_path, args.pointer_marker_namespace)
 
     print(f"Wrote config files to {output_dir}")
 

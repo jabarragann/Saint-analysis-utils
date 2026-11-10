@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QTextEdit,
     QVBoxLayout,
@@ -134,14 +135,23 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         self.create_phantom_button = QPushButton("Create Phantom")
         self.create_phantom_button.clicked.connect(self._on_create_phantom)
 
-        self.create_config_button = QPushButton("Create Config")
-        self.create_config_button.clicked.connect(self._on_create_config)
+        self.create_launch_button = QPushButton("Create Launch && Registration Files")
+        self.create_launch_button.setToolTip(
+            "launch.yaml, launch_registration.yaml and registration_config_{drill,pointer}.yaml "
+            "(uses the phantom created above)"
+        )
+        self.create_launch_button.clicked.connect(self._on_create_launch_files)
+
+        self.create_tf_button = QPushButton("Create TF Config")
+        self.create_tf_button.setToolTip("tf_config_drill.yaml and tf_config_pointer.yaml")
+        self.create_tf_button.clicked.connect(self._on_create_tf_config)
 
         self.save_config_button = QPushButton("Save GUI Config")
 
         button_row = QHBoxLayout()
         button_row.addWidget(self.create_phantom_button)
-        button_row.addWidget(self.create_config_button)
+        button_row.addWidget(self.create_launch_button)
+        button_row.addWidget(self.create_tf_button)
         button_row.addWidget(self.save_config_button)
 
         layout.addWidget(self.output_dir_field)
@@ -173,25 +183,72 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         return self.get_output_dir() / self.ros_bag_subdir
 
     def _backup_input_files(self, nrrd_file, fiducial_filepath):
+        """Copy every file in the input folder(s) into the input_backup dir.
+
+        The input folder is the directory holding the selected segmentation
+        (and the fiducials, if they live elsewhere), e.g. input/PL13_D00/,
+        so sibling files such as the CT and alternative segmentations are
+        backed up too.
+        """
         backup_dir = self.get_input_backup_dir()
         backup_dir.mkdir(parents=True, exist_ok=True)
+
+        input_dirs = []
         for src in (nrrd_file, fiducial_filepath):
             src_path = Path(src)
             if not src_path.is_file():
                 print(f"[Create Phantom] Skipping backup, file not found: {src_path}")
                 continue
-            dst = backup_dir / src_path.name
-            if dst.exists() and src_path.resolve() == dst.resolve():
-                print(f"[Create Phantom] Skipping backup, file already in backup dir: {src_path}")
+            parent = src_path.parent.resolve()
+            if parent not in input_dirs:
+                input_dirs.append(parent)
+
+        for input_dir in input_dirs:
+            if input_dir == backup_dir.resolve():
+                print(f"[Create Phantom] Skipping backup, inputs already in backup dir: {input_dir}")
                 continue
-            print(f"[Create Phantom] Copying {src_path} -> {dst}")
-            shutil.copy2(src_path, dst)
+            print(f"[Create Phantom] Backing up all files in {input_dir} -> {backup_dir}")
+            for src_path in sorted(input_dir.iterdir()):
+                if not src_path.is_file():
+                    continue
+                dst = backup_dir / src_path.name
+                print(f"[Create Phantom]   {src_path.name}")
+                shutil.copy2(src_path, dst)
+
+    def _confirm_phantom_overwrite(self, adf_path, slices_path):
+        """Ask before recreating a phantom that already exists.
+
+        Returns True if no phantom exists yet or the user agrees to recreate it.
+        """
+        existing = []
+        if adf_path.exists():
+            existing.append(adf_path.name)
+        if slices_path.is_dir() and any(slices_path.iterdir()):
+            existing.append(f"{slices_path.name}/")
+        if not existing:
+            return True
+        reply = QMessageBox.warning(
+            self,
+            "Create Phantom",
+            "A phantom already exists:\n\n"
+            + "\n".join(f"  \u2022 {name}" for name in existing)
+            + f"\n\nin {adf_path.parent}\n\nRecreating it will overwrite these files. Continue?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            print("[Create Phantom] Cancelled, existing phantom left unchanged.")
+            return False
+        return True
 
     def _on_create_phantom(self):
         nrrd_file = self.segmentation_field.text()
         fiducial_filepath = self.fiducials_field.text()
         adf_filepath = str(self.get_phantom_dir() / f"{Path(nrrd_file).stem}.yaml")
         slices_path = str(self.get_phantom_dir() / "slices")
+
+        if not self._confirm_phantom_overwrite(Path(adf_filepath), Path(slices_path)):
+            return
 
         if self.copy_input_files:
             self._backup_input_files(nrrd_file, fiducial_filepath)
@@ -214,34 +271,91 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
             button=self.create_phantom_button,
         )
 
-    def _on_create_config(self):
+    def _phantom_path(self):
         nrrd_file = self.segmentation_field.text()
-        phantom_path = str(self.get_phantom_dir() / f"{Path(nrrd_file).stem}.yaml")
-        script = self.create_saint_config_script
-        saint_root = self.saint_config.get("saint_root", "")
-        drill_size = self.saint_config.get("drill_size", "")
-        drill_marker_namespace = self.saint_config.get("drill_marker_namespace", "")
-        pointer_marker_namespace = self.saint_config.get("pointer_marker_namespace", "")
-        drill_tool_tip = self.saint_config.get("drill_tool_tip", "drill_tip")
-        pointer_tool_tip = self.saint_config.get("pointer_tool_tip", "pointer_tip")
+        return self.get_phantom_dir() / f"{Path(nrrd_file).stem}.yaml"
 
+    # Files written by create_saint_config.py for each --only mode.
+    GENERATED_FILES = {
+        "launch": [
+            "launch.yaml",
+            "launch_registration.yaml",
+            "registration_config_drill.yaml",
+            "registration_config_pointer.yaml",
+        ],
+        "tf": ["tf_config_drill.yaml", "tf_config_pointer.yaml"],
+    }
+
+    def _confirm_overwrite(self, only, label):
+        """Ask before regenerating config files that already exist.
+
+        Returns True if nothing would be overwritten or the user agrees.
+        """
+        config_dir = self.get_config_dir()
+        existing = [name for name in self.GENERATED_FILES[only] if (config_dir / name).exists()]
+        if not existing:
+            return True
+        reply = QMessageBox.warning(
+            self,
+            label,
+            "This operation will overwrite the following config files with default values:\n\n"
+            + "\n".join(f"  \u2022 {name}" for name in existing)
+            + f"\n\nin {config_dir}\n\nAny manual edits to these files will be lost. Continue?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            print(f"[{label}] Cancelled, existing config files left unchanged.")
+            return False
+        return True
+
+    def _run_create_saint_config(self, only, label, button, phantom_path=None):
+        script = self.create_saint_config_script
+        if not script:
+            print(f"[{label}] No create_saint_config_script configured.")
+            return
+        if not self._confirm_overwrite(only, label):
+            return
+        cfg = self.saint_config
         args = [
             script,
-            "--saint-root", str(saint_root),
-            "--drill-size", str(drill_size),
-            "--phantom-path", phantom_path,
-            "--drill-marker-namespace", str(drill_marker_namespace),
-            "--pointer-marker-namespace", str(pointer_marker_namespace),
-            "--drill-tool-tip", str(drill_tool_tip),
-            "--pointer-tool-tip", str(pointer_tool_tip),
+            "--only", only,
+            "--saint-root", str(cfg.get("saint_root", "")),
+            "--drill-size", str(cfg.get("drill_size", "")),
+            "--drill-marker-namespace", str(cfg.get("drill_marker_namespace", "")),
+            "--pointer-marker-namespace", str(cfg.get("pointer_marker_namespace", "")),
+            "--drill-tool-tip", str(cfg.get("drill_tool_tip", "drill_tip")),
+            "--pointer-tool-tip", str(cfg.get("pointer_tool_tip", "pointer_tip")),
             "--output-dir", str(self.get_config_dir()),
         ]
+        if phantom_path is not None:
+            args += ["--phantom-path", str(phantom_path)]
         self._run_command(
-            label="Create Config",
+            label=label,
             program=sys.executable,
             args=args,
-            cwd=str(Path(script).parent) if script else None,
-            button=self.create_config_button,
+            cwd=str(Path(script).parent),
+            button=button,
+        )
+
+    def _on_create_launch_files(self):
+        # Launch + registration configs depend on the phantom (path and body names).
+        phantom_path = self._phantom_path()
+        if not phantom_path.is_file():
+            print(f"[Create Launch Files] Phantom not found, run Create Phantom first: {phantom_path}")
+            return
+        self._run_create_saint_config(
+            only="launch",
+            label="Create Launch Files",
+            button=self.create_launch_button,
+            phantom_path=phantom_path,
+        )
+
+    def _on_create_tf_config(self):
+        self._run_create_saint_config(
+            only="tf",
+            label="Create TF Config",
+            button=self.create_tf_button,
         )
 
 
@@ -679,6 +793,26 @@ class MainWindow(QMainWindow):
         layout.addStretch()
 
         self.experiment_panel.save_config_button.clicked.connect(self._save_gui_config)
+
+    def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self,
+            "Save GUI Config",
+            "Save the GUI config before closing?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save,
+        )
+        if reply == QMessageBox.Cancel:
+            event.ignore()
+            return
+        if reply == QMessageBox.Save:
+            try:
+                self._save_gui_config()
+            except OSError as e:
+                QMessageBox.warning(self, "Save GUI Config", f"Could not save GUI config:\n{e}")
+                event.ignore()
+                return
+        event.accept()
 
     def _save_gui_config(self):
         # Start from the loaded config so non-editable sections (script_paths,
