@@ -86,8 +86,47 @@ class ProcessRunnerPanel(QGroupBox):
         self.process.readyReadStandardOutput.connect(self._on_stdout)
         self.process.readyReadStandardError.connect(self._on_stderr)
         self.process.finished.connect(self._on_process_finished)
+        self.process.errorOccurred.connect(self._on_process_error)
         button.setEnabled(False)
         self.process.start(program, args)
+
+    def _check_script(self, label, key, script, config_path):
+        """Return True if `script` exists; otherwise show where to fix it.
+
+        `key` is the entry under script_paths in the GUI config, and
+        `config_path` the YAML file the GUI was started with.
+        """
+        if script and Path(script).is_file():
+            return True
+        problem = (
+            f"script_paths.{key} is not set." if not script
+            else f"Script not found:\n  {script}"
+        )
+        message = (
+            f"{problem}\n\n"
+            f"Set script_paths.{key} to a valid path in the GUI config:\n"
+            f"  {config_path}\n\n"
+            "then restart the GUI (choose Discard when closing, or the old "
+            "path is saved back)."
+        )
+        print(f"[{label}] {message}", file=sys.stderr)
+        QMessageBox.critical(self, label, message)
+        return False
+
+    def _on_process_error(self, error):
+        # Only FailedToStart leaves the process without a finished() signal;
+        # other errors (crash, etc.) are reported by _on_process_finished.
+        if error != QProcess.FailedToStart:
+            return
+        message = (
+            f"Could not start: {self.process.program()}\n"
+            f"Working directory: {self.process.workingDirectory()}\n\n"
+            f"{self.process.errorString()}"
+        )
+        print(f"[{self._current_label}] {message}", file=sys.stderr)
+        QMessageBox.critical(self, self._current_label, message)
+        if self._current_button is not None:
+            self._current_button.setEnabled(True)
 
     def _on_stdout(self):
         data = bytes(self.process.readAllStandardOutput()).decode(errors="replace")
@@ -106,9 +145,10 @@ class ProcessRunnerPanel(QGroupBox):
 
 
 class ExperimentSetupPanel(ProcessRunnerPanel):
-    def __init__(self, config, parent=None):
+    def __init__(self, config, config_path="", parent=None):
         super().__init__("Experiment Setup", parent)
         self.config = config
+        self.config_path = config_path
 
         scripts = config.get("script_paths", {}) or {}
         self.nrrd_to_adf_script = scripts.get("nrrd_to_adf_script", "")
@@ -247,6 +287,10 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
         adf_filepath = str(self.get_phantom_dir() / f"{Path(nrrd_file).stem}.yaml")
         slices_path = str(self.get_phantom_dir() / "slices")
 
+        if not self._check_script(
+            "Create Phantom", "nrrd_to_adf_script", self.nrrd_to_adf_script, self.config_path
+        ):
+            return
         if not self._confirm_phantom_overwrite(Path(adf_filepath), Path(slices_path)):
             return
 
@@ -311,8 +355,7 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
 
     def _run_create_saint_config(self, only, label, button, phantom_path=None):
         script = self.create_saint_config_script
-        if not script:
-            print(f"[{label}] No create_saint_config_script configured.")
+        if not self._check_script(label, "create_saint_config_script", script, self.config_path):
             return
         if not self._confirm_overwrite(only, label):
             return
@@ -403,8 +446,10 @@ class UpdateSegmentationPanel(ProcessRunnerPanel):
 
     def _on_run(self):
         script = self.update_seg_nrrd_script
-        if not script:
-            print("[Update Segmentation] No update_seg_nrrd_script configured.")
+        if not self._check_script(
+            "Update Segmentation", "update_seg_nrrd_script", script,
+            self.experiment_panel.config_path,
+        ):
             return
 
         nrrd_file = self._input_nrrd()
@@ -773,7 +818,7 @@ class DataRecordingPanel(ProcessRunnerPanel):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, config):
+    def __init__(self, config, config_path=""):
         super().__init__()
         self.setWindowTitle("SAINT GUI")
 
@@ -783,7 +828,7 @@ class MainWindow(QMainWindow):
         self.config = config
 
         layout = QVBoxLayout(central)
-        self.experiment_panel = ExperimentSetupPanel(config)
+        self.experiment_panel = ExperimentSetupPanel(config, config_path)
         self.run_saint_panel = RunSaintPanel(self.experiment_panel, config)
         layout.addWidget(self.experiment_panel)
         layout.addWidget(RunRegistrationPanel(self.experiment_panel))
@@ -851,7 +896,7 @@ def main():
     timer.start(200)
     timer.timeout.connect(lambda: None)
 
-    window = MainWindow(config)
+    window = MainWindow(config, str(Path(args.config).expanduser().resolve()))
     window.resize(600, 200)
     window.show()
     sys.exit(app.exec_())
