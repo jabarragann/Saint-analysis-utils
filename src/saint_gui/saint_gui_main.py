@@ -353,9 +353,34 @@ class ExperimentSetupPanel(ProcessRunnerPanel):
             return False
         return True
 
+    def check_saint_root(self, label, parent=None):
+        """Return True if saint_config.saint_root is an existing directory.
+
+        Otherwise show a warning pointing at the GUI config entry to fix.
+        """
+        saint_root = str(self.saint_config.get("saint_root", "") or "")
+        if saint_root and Path(saint_root).is_dir():
+            return True
+        problem = (
+            "saint_config.saint_root is not set." if not saint_root
+            else f"SAINT root directory not found:\n  {saint_root}"
+        )
+        message = (
+            f"{problem}\n\n"
+            "Set saint_config.saint_root to your local volumetric_drilling "
+            f"checkout in the GUI config:\n  {self.config_path}\n\n"
+            "then restart the GUI (choose Discard when closing, or the old "
+            "path is saved back) and regenerate the launch files."
+        )
+        print(f"[{label}] {message}", file=sys.stderr)
+        QMessageBox.warning(parent or self, label, message)
+        return False
+
     def _run_create_saint_config(self, only, label, button, phantom_path=None):
         script = self.create_saint_config_script
         if not self._check_script(label, "create_saint_config_script", script, self.config_path):
+            return
+        if only in ("all", "launch") and not self.check_saint_root(label):
             return
         if not self._confirm_overwrite(only, label):
             return
@@ -680,6 +705,8 @@ class RunSaintPanel(ProcessRunnerPanel):
             self._start_saint()
 
     def _start_saint(self):
+        if not self.experiment_panel.check_saint_root("Run SAINT", parent=self):
+            return
         config_dir = self.experiment_panel.get_config_dir()
         if not config_dir.is_dir():
             print(f"[Run SAINT] Config dir does not exist: {config_dir}")
